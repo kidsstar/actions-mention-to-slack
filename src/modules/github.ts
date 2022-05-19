@@ -14,7 +14,7 @@ export const pickupUsername = (text: string): string[] => {
 };
 
 const acceptActionTypes = {
-  issues: ["opened", "edited"],
+  issues: ["assigned", "opened", "edited"],
   issue_comment: ["created", "edited"],
   pull_request: ["opened", "edited", "review_requested"],
   pull_request_review: ["submitted"],

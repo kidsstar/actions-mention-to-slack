@@ -79,6 +79,51 @@ export const execPrReviewRequestedMention = async (
   await slackClient.postToSlack(slackWebhookUrl, message, { iconUrl, botName });
 };
 
+export const execAssigneesMention = async (
+  payload: WebhookPayload,
+  allInputs: AllInputs,
+  mapping: MappingFile,
+  slackClient: Pick<typeof SlackRepositoryImpl, "postToSlack">
+): Promise<void> => {
+  const info = pickupInfoFromGithubPayload(payload);
+
+  if (info.body === null) {
+    core.debug("finish execAssigneesMention because info.body === null");
+    return;
+  }
+
+  const githubUsernames = payload.issue.assignees.map((assignee) => assignee.login);
+  if (githubUsernames.length === 0) {
+    core.debug("finish execAssigneesMention because githubUsernames.length === 0");
+    return;
+  }
+
+  const slackIds = convertToSlackUsername(githubUsernames, mapping);
+  if (slackIds.length === 0) {
+    core.debug("finish execAssigneesMention because slackIds.length === 0");
+    return;
+  }
+
+  const message = buildSlackPostMessage(
+    slackIds,
+    info.title,
+    info.url,
+    info.body,
+    info.senderName
+  );
+
+  const { slackWebhookUrl, iconUrl, botName } = allInputs;
+
+  const result = await slackClient.postToSlack(slackWebhookUrl, message, {
+    iconUrl,
+    botName,
+  });
+
+  core.debug(
+    ["postToSlack result", JSON.stringify({ result }, null, 2)].join("\n")
+  );
+};
+
 export const execNormalMention = async (
   payload: WebhookPayload,
   allInputs: AllInputs,
@@ -291,6 +336,14 @@ export const main = async (): Promise<void> => {
         ].join("\n")
       );
     }
+
+    await execAssigneesMention(
+      payload,
+      allInputs,
+      mapping,
+      SlackRepositoryImpl
+    );
+    core.debug("finish execAssigneesMention()");
 
     await execNormalMention(
       payload,
